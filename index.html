@@ -154,14 +154,6 @@
       runWithIndicator(()=>commandRegistry[name].run(args));
     }
 
-    function longestCommonPrefix(values) {
-      return values.reduce((prefix,value)=>{
-        let index=0;
-        while (index<prefix.length && prefix[index]===value[index]) index++;
-        return prefix.slice(0,index);
-      });
-    }
-
     function completionContext(value) {
       const hasArgument=/\s/.test(value);
       const tokens=value.split(/\s+/);
@@ -181,10 +173,8 @@
         completionState.lastValue=commandInput.value;
         return;
       }
-      const common=longestCommonPrefix(context.candidates);
-      const next=context.candidates.length===1 ? context.candidates[0] : (common.length>context.fragment.length ? common : context.fragment);
-      commandInput.value=context.base+next;
-      completionState={ key:context.key, candidates:context.candidates, index:-1, lastValue:commandInput.value };
+      commandInput.value=context.base+context.candidates[0];
+      completionState={ key:context.key, candidates:context.candidates, index:0, lastValue:commandInput.value };
     }
 
     commandInput.addEventListener("input",()=>{ completionState=null; historyIndex=-1; });
