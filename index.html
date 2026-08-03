@@ -6,6 +6,7 @@
   <title>NEON OPS</title>
   <style>
     :root { --bg:#05070a; --panel:rgba(7,18,23,.87); --line:#0b2a33; --teal:#18f6c5; --green:#39ff88; --text:#d7fff3; --muted:#78a9a4; }
+    [data-theme="ember"] { --bg:#100806; --panel:rgba(28,13,8,.9); --line:#432016; --teal:#ff9f43; --green:#ffd166; --text:#fff2d7; --muted:#d4a46e; }
     * { box-sizing:border-box; }
     html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:"Roboto Mono","Cascadia Code",Consolas,monospace; font-size:clamp(11px,1.1vw,14px); }
     body { background-image:linear-gradient(rgba(11,42,51,.34) 1px,transparent 1px),linear-gradient(90deg,rgba(11,42,51,.34) 1px,transparent 1px),radial-gradient(circle at 50% 0%,rgba(24,246,197,.08),transparent 42%); background-size:32px 32px,32px 32px,100% 100%; }
@@ -105,14 +106,34 @@
       });
     }
 
+    let activeTheme="neon";
+
+    function setTheme(theme) {
+      activeTheme=theme;
+      document.documentElement.dataset.theme=theme==="neon" ? "" : theme;
+      logEntry("THEME",`HUD theme set to <strong>${theme}</strong>.`,"success");
+    }
+
+    function renderHelp() {
+      const rows=Object.entries(commandRegistry).map(([name,definition])=>{
+        return `<strong>${definition.usage}</strong> — ${definition.description}<br><span class="source">example: ops&gt; ${definition.example}</span>`;
+      }).join("<br><br>");
+      logEntry("HELP",rows,"success");
+    }
+
     const commandRegistry={
-      help:{ usage:"help", run:()=>logEntry("HELP","Commands: help, weather, news, status, clear, history, theme","success") },
-      weather:{ usage:"weather", run:()=>logEntry("WEATHER","Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>","success") },
-      news:{ usage:"news", run:()=>logEntry("NEWS","Five current headlines loaded. Use the REFRESH control to simulate a feed sync.","success") },
-      status:{ usage:"status", run:()=>logEntry("STATUS","LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE","success") },
-      clear:{ usage:"clear", run:()=>{ $("log").innerHTML=""; logEntry("CLEAR","Terminal output cleared.","success"); } },
-      history:{ usage:"history", run:()=>{ const entries=commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>"); logEntry("HISTORY",entries||"No commands recorded.","success"); } },
-      theme:{ usage:"theme [neon|ember]", run:args=>logEntry("THEME",args[0]?`Theme request received: ${args[0]}.`:"Current HUD theme: neon. Use theme neon or theme ember.","success"), args:["neon","ember"] }
+      help:{ usage:"help", description:"Show this command reference.", example:"help", run:renderHelp },
+      weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:()=>logEntry("WEATHER","Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>","success") },
+      news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:()=>logEntry("NEWS","Five current headlines loaded. Use the REFRESH control to simulate a feed sync.","success") },
+      status:{ usage:"status", description:"Show current link, security, and grid state.", example:"status", run:()=>logEntry("STATUS","LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE","success") },
+      clear:{ usage:"clear", description:"Clear terminal output while keeping the prompt available.", example:"clear", run:()=>{ $("log").innerHTML=""; logEntry("CLEAR","Terminal output cleared.","success"); } },
+      history:{ usage:"history", description:"Print commands entered during this browser session.", example:"history", run:()=>{ const entries=commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>"); logEntry("HISTORY",entries||"No commands recorded.","success"); } },
+      theme:{ usage:"theme [neon|ember]", description:"Switch the HUD accent palette; no argument toggles it.", example:"theme ember", args:["neon","ember"], run:args=>{
+        const requested=args[0];
+        if (!requested) { setTheme(activeTheme==="neon" ? "ember" : "neon"); return; }
+        if (!commandRegistry.theme.args.includes(requested)) { logEntry("ERROR",`Unknown theme: ${requested}. Use neon or ember.`,"error"); return; }
+        setTheme(requested);
+      } }
     };
 
     function parseCommand(rawCommand) {
