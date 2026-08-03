@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEON OPS</title>
+  <style>
+    :root { --bg:#05070a; --panel:rgba(7,18,23,.87); --line:#0b2a33; --teal:#18f6c5; --green:#39ff88; --text:#d7fff3; --muted:#78a9a4; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:"Roboto Mono","Cascadia Code",Consolas,monospace; font-size:clamp(11px,1.1vw,14px); }
+    body { background-image:linear-gradient(rgba(11,42,51,.34) 1px,transparent 1px),linear-gradient(90deg,rgba(11,42,51,.34) 1px,transparent 1px),radial-gradient(circle at 50% 0%,rgba(24,246,197,.08),transparent 42%); background-size:32px 32px,32px 32px,100% 100%; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:20; opacity:.15; background:repeating-linear-gradient(to bottom,rgba(255,255,255,.18) 0,rgba(255,255,255,.18) 1px,transparent 1px,transparent 4px); animation:scanlines 8s linear infinite; }
+    @keyframes scanlines { from { transform:translateY(-12px); } to { transform:translateY(12px); } }
+    .dashboard { height:100dvh; max-width:1500px; margin:auto; padding:clamp(9px,1.3vw,18px); display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:clamp(8px,1vw,14px); }
+    .topbar,.command-bar,.card { border:1px solid rgba(24,246,197,.42); background:var(--panel); box-shadow:inset 0 0 28px rgba(24,246,197,.025),0 0 18px rgba(24,246,197,.05); position:relative; }
+    .topbar::before,.card::before,.command-bar::before { content:""; position:absolute; top:-1px; left:11px; width:25px; height:4px; background:var(--teal); box-shadow:0 0 12px var(--teal); }
+    .topbar::after,.card::after,.command-bar::after { content:""; position:absolute; right:8px; bottom:8px; width:8px; height:8px; border-right:1px solid var(--green); border-bottom:1px solid var(--green); }
+    .topbar { min-height:54px; padding:10px 14px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; }
+    .brand { color:var(--teal); letter-spacing:.16em; font-weight:800; text-shadow:0 0 12px rgba(24,246,197,.8); }
+    .clock { color:var(--text); font-size:1.25em; letter-spacing:.14em; white-space:nowrap; }
+    .status-group { justify-self:end; display:flex; gap:7px; }
+    .pill { color:var(--green); border:1px solid rgba(57,255,136,.45); padding:4px 7px; font-size:.78em; white-space:nowrap; box-shadow:inset 0 0 10px rgba(57,255,136,.06); }
+    .dot { display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:var(--green); box-shadow:0 0 9px var(--green); animation:pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity:.35; transform:scale(.7); } }
+    .main-grid { min-height:0; display:grid; grid-template-columns:minmax(185px,.85fr) minmax(290px,1.35fr) minmax(185px,.85fr); gap:clamp(8px,1vw,14px); }
+    .column,.center-stack { min-height:0; display:grid; gap:clamp(8px,1vw,14px); }
+    .column { grid-template-rows:minmax(0,1fr); } .center-stack { grid-template-rows:minmax(0,.88fr) minmax(0,1.12fr); }
+    .card { min-height:0; padding:clamp(11px,1.2vw,16px); overflow:hidden; display:flex; flex-direction:column; }
+    .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; color:var(--teal); font-size:.82em; letter-spacing:.12em; text-transform:uppercase; }
+    .source { color:var(--muted); font-size:.78em; letter-spacing:0; text-transform:none; }
+    .metric { padding:10px 0; border-bottom:1px solid rgba(11,42,51,.9); } .metric:last-of-type { border-bottom:0; }
+    .metric-line { display:flex; align-items:baseline; justify-content:space-between; color:var(--muted); font-size:.82em; }
+    .metric strong { color:var(--text); font-size:1.35em; text-shadow:0 0 9px rgba(24,246,197,.28); }
+    canvas { width:100%; height:34px; display:block; margin-top:3px; opacity:.92; }
+    .weather-main { display:grid; grid-template-columns:1fr auto; align-items:center; gap:14px; flex:1; }
+    .temperature { color:var(--text); font-size:clamp(2.4rem,5vw,4.4rem); line-height:.9; letter-spacing:-.09em; text-shadow:0 0 18px rgba(24,246,197,.35); }
+    .condition { color:var(--green); margin-top:10px; font-size:1.1em; }
+    .weather-data { margin-top:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:10px; font-size:.8em; }
+    .cloud-icon { width:72px; height:46px; position:relative; filter:drop-shadow(0 0 8px rgba(24,246,197,.7)); animation:drift 3s ease-in-out infinite; }
+    .cloud-icon::before { content:""; position:absolute; width:52px; height:17px; border:2px solid var(--teal); border-radius:18px; bottom:4px; left:7px; box-shadow:inset 0 0 12px rgba(24,246,197,.15); }
+    .cloud-icon::after { content:""; position:absolute; width:23px; height:23px; border:2px solid var(--teal); border-radius:50%; bottom:15px; left:19px; background:var(--panel); }
+    .rain { position:absolute; width:2px; height:9px; background:var(--green); bottom:-5px; left:23px; box-shadow:14px 5px var(--green),28px 0 var(--green); animation:rain .9s linear infinite; }
+    @keyframes drift { 50% { transform:translateX(5px) translateY(-3px); } } @keyframes rain { to { transform:translateY(6px); opacity:.25; } }
+    button { color:var(--teal); background:rgba(24,246,197,.04); border:1px solid rgba(24,246,197,.48); font:inherit; font-size:.76em; padding:5px 8px; cursor:pointer; transition:.2s ease; }
+    button:hover,button:focus-visible { outline:none; color:var(--bg); background:var(--teal); box-shadow:0 0 14px var(--teal); }
+    .news-list,.timeline { list-style:none; padding:0; margin:0; min-height:0; overflow:hidden; }
+    .news-list li { display:grid; grid-template-columns:1fr auto; gap:8px; padding:8px 0; border-bottom:1px solid rgba(11,42,51,.8); font-size:.85em; } .news-list li:last-child { border-bottom:0; }
+    .news-list time { color:var(--muted); white-space:nowrap; } .headline { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .spinner { width:11px; height:11px; display:inline-block; border:2px solid rgba(24,246,197,.25); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; } @keyframes spin { to { transform:rotate(360deg); } }
+    .timeline li { position:relative; border-left:1px solid rgba(24,246,197,.4); padding:0 0 14px 15px; color:var(--text); font-size:.86em; }
+    .timeline li::before { content:""; position:absolute; left:-4px; top:3px; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 9px var(--green); }
+    .timeline time { display:block; margin-top:3px; color:var(--muted); font-size:.75em; }
+    .command-bar { min-height:112px; padding:9px 13px; display:grid; grid-template-rows:1fr auto; gap:7px; }
+    #log { overflow:auto; color:var(--muted); font-size:.8em; line-height:1.45; scrollbar-width:thin; } .log-success { color:var(--green); }
+    .prompt-row { display:flex; gap:8px; align-items:center; } .prompt { color:var(--green); text-shadow:0 0 8px var(--green); }
+    #commandInput { flex:1; min-width:0; color:var(--text); background:transparent; border:0; border-bottom:1px solid rgba(24,246,197,.35); padding:5px 0; font:inherit; outline:none; }
+    #commandInput:focus { border-bottom-color:var(--teal); box-shadow:0 6px 12px -9px var(--teal); }
+    @media (max-width:700px) { .dashboard { padding:7px; gap:7px; } .topbar { min-height:45px; padding:8px; } .clock { font-size:1em; letter-spacing:.05em; } .status-group { gap:3px; } .pill { padding:3px 4px; font-size:.64em; } .main-grid { grid-template-columns:1fr 1.22fr; grid-template-rows:minmax(0,1fr) minmax(0,1fr); gap:7px; } .column:first-child { grid-row:1 / span 2; } .column:last-child { grid-column:2; } .center-stack { grid-column:2; grid-row:1; grid-template-rows:1fr; } .center-stack .card:last-child { display:none; } .card { padding:9px; } .card-header { margin-bottom:7px; font-size:.72em; } .metric { padding:6px 0; } canvas { height:22px; } .weather-main { gap:4px; } .cloud-icon { transform:scale(.72); transform-origin:right center; } .temperature { font-size:2.25rem; } .weather-data { gap:5px; margin-top:7px; font-size:.7em; } .timeline li { padding:0 0 8px 11px; font-size:.74em; } .command-bar { min-height:80px; } .news-list { display:none; } }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+    <header class="topbar"><div class="brand">NEON OPS</div><time class="clock" id="clock">00:00:00</time><div class="status-group"><span class="pill"><i class="dot"></i>LINK: OK</span><span class="pill"><i class="dot"></i>SEC: SAFE</span></div></header>
+    <section class="main-grid">
+      <aside class="column"><section class="card"><div class="card-header"><span>System Matrix</span><span class="source">LIVE SIM</span></div><div class="metric"><div class="metric-line"><span>CPU LOAD</span><strong id="cpuValue">42%</strong></div><canvas id="cpuChart"></canvas></div><div class="metric"><div class="metric-line"><span>MEMORY</span><strong id="memValue">68%</strong></div><canvas id="memChart"></canvas></div><div class="metric"><div class="metric-line"><span>NETWORK</span><strong id="netValue">↓ 18.4 / ↑ 3.2</strong></div><canvas id="netChart"></canvas></div></section></aside>
+      <section class="center-stack"><section class="card"><div class="card-header"><span>Atmospheric Feed</span><span class="source">SIMULATED API: Neo Tokyo</span></div><div class="weather-main"><div><div class="temperature" id="temp">19°</div><div class="condition">CLOUDY // 12°C–21°C</div><div class="weather-data"><span>WIND: 14 km/h NE</span><span>HUM: 71%</span><span>UNIT: °C / °F</span></div></div><div class="cloud-icon" aria-label="Animated cloudy weather icon"><span class="rain"></span></div></div></section><section class="card"><div class="card-header"><span>Signal News</span><button id="refreshNews" type="button">REFRESH</button></div><ul class="news-list" id="newsList"></ul></section></section>
+      <aside class="column"><section class="card"><div class="card-header"><span>Timeline / Alerts</span><button id="clearAlerts" type="button">CLEAR</button></div><ul class="timeline" id="timeline"></ul></section></aside>
+    </section>
+    <section class="command-bar"><div id="log"><div><span class="log-success">[SYSTEM]</span> NEON OPS terminal ready. Type <span class="log-success">help</span> for command set.</div></div><div class="prompt-row"><span class="prompt">ops&gt;</span><input id="commandInput" autocomplete="off" spellcheck="false" aria-label="Terminal command input" placeholder="enter command..." /></div></section>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id);
+    const news=[["Satellite relay node enters low-latency mode","12m ago"],["Pacific mesh protocol gets a security patch","38m ago"],["Aurora sensors report elevated ion activity","1h ago"],["Edge cluster capacity rises across sector 04","2h ago"],["Independent weather beacon returns online","3h ago"]];
+    const alerts=["Service check passed // all core systems nominal","New signals detected on channel 7.13","Encrypted telemetry packet verified","Perimeter scan completed without anomaly"];
+    function updateClock() { $("clock").textContent=new Date().toLocaleTimeString("en-GB",{hour12:false}); }
+    function renderNews() { $("newsList").innerHTML=news.map(([title,time])=>`<li><span class="headline">${title}</span><time>${time}</time></li>`).join(""); }
+    function addAlert(text) { const li=document.createElement("li"),now=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); li.innerHTML=`${text}<time>${now} LOCAL</time>`; $("timeline").prepend(li); while ($("timeline").children.length>6) $("timeline").lastElementChild.remove(); }
+    function randomAlert() { const pool=["Service check passed // all core systems nominal","New signals detected on channel 7.13","Remote node handshake confirmed","Anomaly scan completed // no threats","Traffic pulse registered on secure uplink","Backup relay synchronization complete"]; addAlert(pool[Math.floor(Math.random()*pool.length)]); }
+    function setupChart(canvasId,color) { const canvas=$(canvasId),values=Array.from({length:28},()=>28+Math.random()*48),ctx=canvas.getContext("2d"); function draw() { const rect=canvas.getBoundingClientRect(),dpr=devicePixelRatio||1; canvas.width=rect.width*dpr; canvas.height=rect.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); const w=rect.width,h=rect.height,grad=ctx.createLinearGradient(0,0,w,0); ctx.clearRect(0,0,w,h); grad.addColorStop(0,"rgba(24,246,197,.15)"); grad.addColorStop(1,color); ctx.beginPath(); values.forEach((value,i)=>{const x=i*w/(values.length-1),y=h-(value/100)*(h-5)-2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}); ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle="rgba(24,246,197,.08)";ctx.fill();ctx.beginPath();values.forEach((value,i)=>{const x=i*w/(values.length-1),y=h-(value/100)*(h-5)-2;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle=grad;ctx.lineWidth=1.4;ctx.shadowColor=color;ctx.shadowBlur=7;ctx.stroke();ctx.shadowBlur=0; } setInterval(()=>{values.shift();values.push(Math.max(8,Math.min(96,values.at(-1)+(Math.random()-.5)*20)));draw();},1200);window.addEventListener("resize",draw);draw(); }
+    function updateStats() { $("cpuValue").textContent=`${Math.floor(30+Math.random()*34)}%`; $("memValue").textContent=`${Math.floor(55+Math.random()*22)}%`; $("netValue").textContent=`↓ ${(12+Math.random()*15).toFixed(1)} / ↑ ${(1+Math.random()*5).toFixed(1)}`; }
+    function log(message,success=false) { const line=document.createElement("div"); line.innerHTML=success?`<span class="log-success">[OPS]</span> ${message}`:message; $("log").appendChild(line); $("log").scrollTop=$("log").scrollHeight; }
+    $("refreshNews").addEventListener("click",()=>{const button=$("refreshNews");button.disabled=true;button.innerHTML='<span class="spinner"></span> SYNC';setTimeout(()=>{news.unshift(["Fresh uplink bulletin received from field relay","now"]);news.length=5;renderNews();button.textContent="REFRESH";button.disabled=false;log("News feed synchronized.",true);},1400);});
+    $("clearAlerts").addEventListener("click",()=>{$("timeline").innerHTML="";log("Alert timeline cleared.",true);});
+    $("commandInput").addEventListener("keydown",event=>{if(event.key!=="Enter")return;const command=event.target.value.trim().toLowerCase();if(!command)return;log(`<span class="prompt">ops&gt;</span> ${command}`);event.target.value="";const commands={help:"Commands: help, weather, news, clear, status",weather:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. [SIMULATED WEATHER API]",news:"Five current headlines loaded from simulated feed. Use REFRESH to sync.",clear:"Terminal log cleared.",status:"LINK: OK | SEC: SAFE | GRID: ONLINE"};if(command==="clear"){$("log").innerHTML="";log(commands.clear,true);}else log(commands[command]||`Unknown command: ${command}. Type help.`,Boolean(commands[command]));});
+    updateClock();setInterval(updateClock,1000);renderNews();alerts.forEach(addAlert);setupChart("cpuChart","#18f6c5");setupChart("memChart","#39ff88");setupChart("netChart","#18f6c5");updateStats();setInterval(updateStats,1700);setInterval(randomAlert,10000);
+  </script>
+</body>
+</html>
