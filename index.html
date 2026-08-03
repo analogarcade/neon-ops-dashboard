@@ -81,7 +81,45 @@
     function log(message,success=false) { const line=document.createElement("div"); line.innerHTML=success?`<span class="log-success">[OPS]</span> ${message}`:message; $("log").appendChild(line); $("log").scrollTop=$("log").scrollHeight; }
     $("refreshNews").addEventListener("click",()=>{const button=$("refreshNews");button.disabled=true;button.innerHTML='<span class="spinner"></span> SYNC';setTimeout(()=>{news.unshift(["Fresh uplink bulletin received from field relay","now"]);news.length=5;renderNews();button.textContent="REFRESH";button.disabled=false;log("News feed synchronized.",true);},1400);});
     $("clearAlerts").addEventListener("click",()=>{$("timeline").innerHTML="";log("Alert timeline cleared.",true);});
-    $("commandInput").addEventListener("keydown",event=>{if(event.key!=="Enter")return;const command=event.target.value.trim().toLowerCase();if(!command)return;log(`<span class="prompt">ops&gt;</span> ${command}`);event.target.value="";const commands={help:"Commands: help, weather, news, clear, status",weather:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. [SIMULATED WEATHER API]",news:"Five current headlines loaded from simulated feed. Use REFRESH to sync.",clear:"Terminal log cleared.",status:"LINK: OK | SEC: SAFE | GRID: ONLINE"};if(command==="clear"){$("log").innerHTML="";log(commands.clear,true);}else log(commands[command]||`Unknown command: ${command}. Type help.`,Boolean(commands[command]));});
+    const commandHistory=[];
+    let historyIndex=-1;
+    let draftCommand="";
+    const commandInput=$("commandInput");
+
+    function runCommand(rawCommand) {
+      const command=rawCommand.trim().toLowerCase();
+      if (!command) return;
+      commandHistory.push(rawCommand.trim());
+      historyIndex=-1;
+      draftCommand="";
+      log(`<span class="prompt">ops&gt;</span> ${command}`);
+      const commands={
+        help:"Commands: help, weather, news, clear, status, history, theme",
+        weather:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. [SIMULATED WEATHER API]",
+        news:"Five current headlines loaded from simulated feed. Use REFRESH to sync.",
+        clear:"Terminal log cleared.",
+        status:"LINK: OK | SEC: SAFE | GRID: ONLINE",
+        history:commandHistory.map((entry,index)=>`${index + 1}: ${entry}`).join("<br>")
+      };
+      if (command==="clear") { $("log").innerHTML=""; log(commands.clear,true); }
+      else log(commands[command]||`Unknown command: ${command}. Type help.`,Boolean(commands[command]));
+    }
+
+    commandInput.addEventListener("keydown",event=>{
+      if (event.key==="Enter") { runCommand(commandInput.value); commandInput.value=""; return; }
+      if (event.key!=="ArrowUp" && event.key!=="ArrowDown") return;
+      event.preventDefault();
+      if (!commandHistory.length) return;
+      if (event.key==="ArrowUp") {
+        if (historyIndex===-1) { draftCommand=commandInput.value; historyIndex=commandHistory.length - 1; }
+        else historyIndex=Math.max(0,historyIndex - 1);
+        commandInput.value=commandHistory[historyIndex];
+      } else if (historyIndex!==-1) {
+        historyIndex++;
+        commandInput.value=historyIndex>=commandHistory.length ? draftCommand : commandHistory[historyIndex];
+        if (historyIndex>=commandHistory.length) historyIndex=-1;
+      }
+    });
     updateClock();setInterval(updateClock,1000);renderNews();alerts.forEach(addAlert);setupChart("cpuChart","#18f6c5");setupChart("memChart","#39ff88");setupChart("netChart","#18f6c5");updateStats();setInterval(updateStats,1700);setInterval(randomAlert,10000);
   </script>
 </body>
