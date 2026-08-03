@@ -91,18 +91,29 @@
 
     function logEntry(label,message,tone="success") {
       const entry=document.createElement("div");
-      entry.className=`console-entry console-entry--${tone}`;
-      entry.innerHTML=`<span class="console-entry__label">[${label}]</span> ${message}`;
+      updateConsoleEntry(entry,label,message,tone);
       $("log").appendChild(entry);
       $("log").scrollTop=$("log").scrollHeight;
       return entry;
     }
 
+    function updateConsoleEntry(entry,label,message,tone) {
+      entry.className=`console-entry console-entry--${tone}`;
+      entry.innerHTML=`<span class="console-entry__label">[${label}]</span> ${message}`;
+    }
+
     function runWithIndicator(callback) {
-      const indicator=logEntry("RUN","<span class=\"console-running\">processing command</span>","success");
+      const entry=logEntry("RUN","<span class=\"console-running\">processing command</span>","running");
       requestAnimationFrame(()=>{
-        callback();
-        indicator.remove();
+        try {
+          const result=callback();
+          if (result.clear) { $("log").innerHTML=""; $("log").appendChild(entry); }
+          const tone=result.tone||"success";
+          updateConsoleEntry(entry,tone==="error" ? "ERROR" : "SUCCESS",result.message,tone);
+          $("log").scrollTop=$("log").scrollHeight;
+        } catch (error) {
+          updateConsoleEntry(entry,"ERROR","Command failed unexpectedly.","error");
+        }
       });
     }
 
@@ -111,28 +122,28 @@
     function setTheme(theme) {
       activeTheme=theme;
       document.documentElement.dataset.theme=theme==="neon" ? "" : theme;
-      logEntry("THEME",`HUD theme set to <strong>${theme}</strong>.`,"success");
+      return `HUD theme set to <strong>${theme}</strong>.`;
     }
 
     function renderHelp() {
       const rows=Object.entries(commandRegistry).map(([name,definition])=>{
         return `<strong>${definition.usage}</strong> — ${definition.description}<br><span class="source">example: ops&gt; ${definition.example}</span>`;
       }).join("<br><br>");
-      logEntry("HELP",rows,"success");
+      return rows;
     }
 
     const commandRegistry={
-      help:{ usage:"help", description:"Show this command reference.", example:"help", run:renderHelp },
-      weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:()=>logEntry("WEATHER","Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>","success") },
-      news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:()=>logEntry("NEWS","Five current headlines loaded. Use the REFRESH control to simulate a feed sync.","success") },
-      status:{ usage:"status", description:"Show current link, security, and grid state.", example:"status", run:()=>logEntry("STATUS","LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE","success") },
-      clear:{ usage:"clear", description:"Clear terminal output while keeping the prompt available.", example:"clear", run:()=>{ $("log").innerHTML=""; logEntry("CLEAR","Terminal output cleared.","success"); } },
-      history:{ usage:"history", description:"Print commands entered during this browser session.", example:"history", run:()=>{ const entries=commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>"); logEntry("HISTORY",entries||"No commands recorded.","success"); } },
+      help:{ usage:"help", description:"Show this command reference.", example:"help", run:()=>({ message:renderHelp() }) },
+      weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:()=>({ message:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>" }) },
+      news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:()=>({ message:"Five current headlines loaded. Use the REFRESH control to simulate a feed sync." }) },
+      status:{ usage:"status", description:"Show current link, security, and grid state.", example:"status", run:()=>({ message:"LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE" }) },
+      clear:{ usage:"clear", description:"Clear terminal output while keeping the prompt available.", example:"clear", run:()=>({ message:"Terminal output cleared.", clear:true }) },
+      history:{ usage:"history", description:"Print commands entered during this browser session.", example:"history", run:()=>({ message:commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>")||"No commands recorded." }) },
       theme:{ usage:"theme [neon|ember]", description:"Switch the HUD accent palette; no argument toggles it.", example:"theme ember", args:["neon","ember"], run:args=>{
         const requested=args[0];
-        if (!requested) { setTheme(activeTheme==="neon" ? "ember" : "neon"); return; }
-        if (!commandRegistry.theme.args.includes(requested)) { logEntry("ERROR",`Unknown theme: ${requested}. Use neon or ember.`,"error"); return; }
-        setTheme(requested);
+        if (!requested) return { message:setTheme(activeTheme==="neon" ? "ember" : "neon") };
+        if (!commandRegistry.theme.args.includes(requested)) return { message:`Unknown theme: ${requested}. Use neon or ember.`, tone:"error" };
+        return { message:setTheme(requested) };
       } }
     };
 
@@ -150,8 +161,7 @@
       draftCommand="";
       completionState=null;
       log(`<span class="prompt">ops&gt;</span> ${value}`);
-      if (!commandRegistry[name]) { logEntry("ERROR",`Unknown command: ${name}. Type help.`,"error"); return; }
-      runWithIndicator(()=>commandRegistry[name].run(args));
+      runWithIndicator(()=>commandRegistry[name] ? commandRegistry[name].run(args) : { message:`Unknown command: ${name}. Type help.`, tone:"error" });
     }
 
     function completionContext(value) {
