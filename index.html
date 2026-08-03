@@ -126,13 +126,13 @@
     }
 
     function renderHelp() {
-      const rows=Object.entries(commandRegistry).map(([name,definition])=>{
+      const rows=Object.entries(COMMANDS).map(([name,definition])=>{
         return `<strong>${definition.usage}</strong> — ${definition.description}<br><span class="source">example: ops&gt; ${definition.example}</span>`;
       }).join("<br><br>");
       return rows;
     }
 
-    const commandRegistry={
+    const COMMANDS={
       help:{ usage:"help", description:"Show this command reference.", example:"help", run:()=>({ message:renderHelp() }) },
       weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:()=>({ message:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>" }) },
       news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:()=>({ message:"Five current headlines loaded. Use the REFRESH control to simulate a feed sync." }) },
@@ -142,7 +142,7 @@
       theme:{ usage:"theme [neon|ember]", description:"Switch the HUD accent palette; no argument toggles it.", example:"theme ember", args:["neon","ember"], run:args=>{
         const requested=args[0];
         if (!requested) return { message:setTheme(activeTheme==="neon" ? "ember" : "neon") };
-        if (!commandRegistry.theme.args.includes(requested)) return { message:`Unknown theme: ${requested}. Use neon or ember.`, tone:"error" };
+        if (!COMMANDS.theme.args.includes(requested)) return { message:`Unknown theme: ${requested}. Use neon or ember.`, tone:"error" };
         return { message:setTheme(requested) };
       } }
     };
@@ -161,7 +161,15 @@
       draftCommand="";
       completionState=null;
       log(`<span class="prompt">ops&gt;</span> ${value}`);
-      runWithIndicator(()=>commandRegistry[name] ? commandRegistry[name].run(args) : { message:`Unknown command: ${name}. Type help.`, tone:"error" });
+      runWithIndicator(()=>COMMANDS[name] ? COMMANDS[name].run(args) : { message:`Unknown command: ${name}. Type help.`, tone:"error" });
+    }
+
+    function longestCommonPrefix(candidates) {
+      return candidates.reduce((prefix,candidate)=>{
+        let index=0;
+        while (index<prefix.length && prefix[index]===candidate[index]) index++;
+        return prefix.slice(0,index);
+      });
     }
 
     function completionContext(value) {
@@ -169,7 +177,7 @@
       const tokens=value.split(/\s+/);
       const command=tokens[0].toLowerCase();
       const fragment=(hasArgument ? tokens.at(-1) : command).toLowerCase();
-      const candidates=hasArgument && commandRegistry[command]?.args ? commandRegistry[command].args : Object.keys(commandRegistry);
+      const candidates=hasArgument && COMMANDS[command]?.args ? COMMANDS[command].args : Object.keys(COMMANDS);
       return { base:hasArgument ? `${command} ` : "", fragment, candidates:candidates.filter(item=>item.startsWith(fragment)), key:hasArgument ? `arg:${command}` : "command" };
     }
 
@@ -183,8 +191,10 @@
         completionState.lastValue=commandInput.value;
         return;
       }
-      commandInput.value=context.base+context.candidates[0];
-      completionState={ key:context.key, candidates:context.candidates, index:0, lastValue:commandInput.value };
+      const commonPrefix=longestCommonPrefix(context.candidates);
+      const next=commonPrefix.length>context.fragment.length ? commonPrefix : context.candidates[0];
+      commandInput.value=context.base+next;
+      completionState={ key:context.key, candidates:context.candidates, index:next===context.candidates[0] ? 0 : -1, lastValue:commandInput.value };
     }
 
     commandInput.addEventListener("input",()=>{ completionState=null; historyIndex=-1; });
