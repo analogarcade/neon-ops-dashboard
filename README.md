@@ -1,6 +1,6 @@
 # NEON OPS
 
-A compact, single-page hacker dashboard with a futuristic terminal/HUD aesthetic. Built as a standalone browser experience with no frameworks, build step, or external dependencies.
+A compact, single-page cyberpunk operations dashboard with a futuristic terminal/HUD aesthetic. Built as a standalone browser experience with no frameworks, build step, or external dependencies.
 
 ![Status](https://img.shields.io/badge/status-operational-39ff88?style=flat-square)
 ![Stack](https://img.shields.io/badge/stack-HTML%20%2F%20CSS%20%2F%20JS-18f6c5?style=flat-square)
@@ -21,7 +21,8 @@ The interface is intentionally self-contained: the current weather, headlines, s
 - Live-updating CPU, memory, and network values
 - Canvas sparklines for system activity
 - Auto-appending alerts every 10 seconds, with a clear action
-- Terminal command bar supporting `help`, `weather`, `news`, `status`, and `clear`
+- Ops-console terminal with command history, Tab completion, run-state feedback, and framed results
+- Built-in HUD palettes: neon and ember
 - Responsive single-viewport layout for desktop and small mobile screens
 
 ## Quick Start
@@ -51,11 +52,19 @@ No installation is required.
 
 | Command | Result |
 | --- | --- |
-| `help` | Shows available commands. |
+| `help` | Shows formatted command usage and examples. |
 | `weather` | Displays the simulated weather-feed response. |
 | `news` | Describes the simulated headline feed. |
 | `status` | Shows the current operational status. |
 | `clear` | Clears the terminal log. |
+| `history` | Prints commands entered during the current browser session. |
+| `theme [neon\|ember]` | Switches the HUD palette; `theme` by itself toggles it. |
+
+### Console Controls
+
+- Press <kbd>↑</kbd> / <kbd>↓</kbd> to browse command history.
+- Press <kbd>Tab</kbd> to complete a command. Repeated presses cycle matching commands.
+- Each command starts with a RUN indicator and resolves to a consistently framed SUCCESS or ERROR entry.
 
 ## Connecting Real Data
 
