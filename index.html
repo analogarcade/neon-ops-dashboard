@@ -52,6 +52,7 @@
     .timeline time { display:block; margin-top:3px; color:var(--muted); font-size:.75em; }
     .command-bar { min-height:112px; padding:9px 13px; display:grid; grid-template-rows:1fr auto; gap:7px; }
     #log { overflow:auto; color:var(--muted); font-size:.8em; line-height:1.45; scrollbar-width:thin; } .log-success { color:var(--green); }
+    .console-entry { margin:0 0 6px; padding-left:9px; border-left:1px solid rgba(24,246,197,.25); } .console-entry__label { color:var(--teal); font-size:.82em; letter-spacing:.08em; } .console-entry--success { border-left-color:var(--green); } .console-entry--error { border-left-color:#ff627c; } .console-entry--error .console-entry__label { color:#ff627c; } .console-running { display:inline-flex; align-items:center; gap:6px; color:var(--teal); } .console-running::before { content:""; width:6px; height:6px; border:1px solid var(--teal); border-top-color:transparent; border-radius:50%; animation:spin .65s linear infinite; }
     .prompt-row { display:flex; gap:8px; align-items:center; } .prompt { color:var(--green); text-shadow:0 0 8px var(--green); }
     #commandInput { flex:1; min-width:0; color:var(--text); background:transparent; border:0; border-bottom:1px solid rgba(24,246,197,.35); padding:5px 0; font:inherit; outline:none; }
     #commandInput:focus { border-bottom-color:var(--teal); box-shadow:0 6px 12px -9px var(--teal); }
@@ -82,37 +83,99 @@
     $("refreshNews").addEventListener("click",()=>{const button=$("refreshNews");button.disabled=true;button.innerHTML='<span class="spinner"></span> SYNC';setTimeout(()=>{news.unshift(["Fresh uplink bulletin received from field relay","now"]);news.length=5;renderNews();button.textContent="REFRESH";button.disabled=false;log("News feed synchronized.",true);},1400);});
     $("clearAlerts").addEventListener("click",()=>{$("timeline").innerHTML="";log("Alert timeline cleared.",true);});
     const commandHistory=[];
+    const commandInput=$("commandInput");
     let historyIndex=-1;
     let draftCommand="";
-    const commandInput=$("commandInput");
+    let completionState=null;
 
-    function runCommand(rawCommand) {
-      const command=rawCommand.trim().toLowerCase();
-      if (!command) return;
-      commandHistory.push(rawCommand.trim());
-      historyIndex=-1;
-      draftCommand="";
-      log(`<span class="prompt">ops&gt;</span> ${command}`);
-      const commands={
-        help:"Commands: help, weather, news, clear, status, history, theme",
-        weather:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. [SIMULATED WEATHER API]",
-        news:"Five current headlines loaded from simulated feed. Use REFRESH to sync.",
-        clear:"Terminal log cleared.",
-        status:"LINK: OK | SEC: SAFE | GRID: ONLINE",
-        history:commandHistory.map((entry,index)=>`${index + 1}: ${entry}`).join("<br>")
-      };
-      if (command==="clear") { $("log").innerHTML=""; log(commands.clear,true); }
-      else log(commands[command]||`Unknown command: ${command}. Type help.`,Boolean(commands[command]));
+    function logEntry(label,message,tone="success") {
+      const entry=document.createElement("div");
+      entry.className=`console-entry console-entry--${tone}`;
+      entry.innerHTML=`<span class="console-entry__label">[${label}]</span> ${message}`;
+      $("log").appendChild(entry);
+      $("log").scrollTop=$("log").scrollHeight;
+      return entry;
     }
 
+    function runWithIndicator(callback) {
+      const indicator=logEntry("RUN","<span class=\"console-running\">processing command</span>","success");
+      requestAnimationFrame(()=>{
+        callback();
+        indicator.remove();
+      });
+    }
+
+    const commandRegistry={
+      help:{ usage:"help", run:()=>logEntry("HELP","Commands: help, weather, news, status, clear, history, theme","success") },
+      weather:{ usage:"weather", run:()=>logEntry("WEATHER","Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>","success") },
+      news:{ usage:"news", run:()=>logEntry("NEWS","Five current headlines loaded. Use the REFRESH control to simulate a feed sync.","success") },
+      status:{ usage:"status", run:()=>logEntry("STATUS","LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE","success") },
+      clear:{ usage:"clear", run:()=>{ $("log").innerHTML=""; logEntry("CLEAR","Terminal output cleared.","success"); } },
+      history:{ usage:"history", run:()=>{ const entries=commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>"); logEntry("HISTORY",entries||"No commands recorded.","success"); } },
+      theme:{ usage:"theme [neon|ember]", run:args=>logEntry("THEME",args[0]?`Theme request received: ${args[0]}.`:"Current HUD theme: neon. Use theme neon or theme ember.","success"), args:["neon","ember"] }
+    };
+
+    function parseCommand(rawCommand) {
+      const tokens=rawCommand.trim().toLowerCase().split(/\s+/);
+      return { name:tokens[0], args:tokens.slice(1) };
+    }
+
+    function runCommand(rawCommand) {
+      const value=rawCommand.trim();
+      if (!value) return;
+      const {name,args}=parseCommand(value);
+      commandHistory.push(value);
+      historyIndex=-1;
+      draftCommand="";
+      completionState=null;
+      log(`<span class="prompt">ops&gt;</span> ${value}`);
+      if (!commandRegistry[name]) { logEntry("ERROR",`Unknown command: ${name}. Type help.`,"error"); return; }
+      runWithIndicator(()=>commandRegistry[name].run(args));
+    }
+
+    function longestCommonPrefix(values) {
+      return values.reduce((prefix,value)=>{
+        let index=0;
+        while (index<prefix.length && prefix[index]===value[index]) index++;
+        return prefix.slice(0,index);
+      });
+    }
+
+    function completionContext(value) {
+      const hasArgument=/\s/.test(value);
+      const tokens=value.split(/\s+/);
+      const command=tokens[0].toLowerCase();
+      const fragment=(hasArgument ? tokens.at(-1) : command).toLowerCase();
+      const candidates=hasArgument && commandRegistry[command]?.args ? commandRegistry[command].args : Object.keys(commandRegistry);
+      return { base:hasArgument ? `${command} ` : "", fragment, candidates:candidates.filter(item=>item.startsWith(fragment)), key:hasArgument ? `arg:${command}` : "command" };
+    }
+
+    function completeInput() {
+      const value=commandInput.value.trimStart();
+      const context=completionContext(value);
+      if (!context.candidates.length) return;
+      if (completionState && completionState.key===context.key && completionState.lastValue===value) {
+        completionState.index=(completionState.index+1)%completionState.candidates.length;
+        commandInput.value=context.base+completionState.candidates[completionState.index];
+        completionState.lastValue=commandInput.value;
+        return;
+      }
+      const common=longestCommonPrefix(context.candidates);
+      const next=context.candidates.length===1 ? context.candidates[0] : (common.length>context.fragment.length ? common : context.fragment);
+      commandInput.value=context.base+next;
+      completionState={ key:context.key, candidates:context.candidates, index:-1, lastValue:commandInput.value };
+    }
+
+    commandInput.addEventListener("input",()=>{ completionState=null; historyIndex=-1; });
     commandInput.addEventListener("keydown",event=>{
       if (event.key==="Enter") { runCommand(commandInput.value); commandInput.value=""; return; }
+      if (event.key==="Tab") { event.preventDefault(); completeInput(); return; }
       if (event.key!=="ArrowUp" && event.key!=="ArrowDown") return;
       event.preventDefault();
       if (!commandHistory.length) return;
       if (event.key==="ArrowUp") {
-        if (historyIndex===-1) { draftCommand=commandInput.value; historyIndex=commandHistory.length - 1; }
-        else historyIndex=Math.max(0,historyIndex - 1);
+        if (historyIndex===-1) { draftCommand=commandInput.value; historyIndex=commandHistory.length-1; }
+        else historyIndex=Math.max(0,historyIndex-1);
         commandInput.value=commandHistory[historyIndex];
       } else if (historyIndex!==-1) {
         historyIndex++;
