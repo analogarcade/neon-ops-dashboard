@@ -102,17 +102,17 @@
       entry.innerHTML=`<span class="console-entry__label">[${label}]</span> ${message}`;
     }
 
-    function runWithIndicator(callback) {
-      const entry=logEntry("RUN","<span class=\"console-running\">processing command</span>","running");
+    function runWithIndicator(command,callback) {
+      const entry=logEntry("RUN",`<span class="console-running">${command}</span>`,"running");
       requestAnimationFrame(()=>{
         try {
           const result=callback();
           if (result.clear) { $("log").innerHTML=""; $("log").appendChild(entry); }
           const tone=result.tone||"success";
-          updateConsoleEntry(entry,tone==="error" ? "ERROR" : "SUCCESS",result.message,tone);
+          updateConsoleEntry(entry,tone==="error" ? "ERR" : "OK",result.message,tone);
           $("log").scrollTop=$("log").scrollHeight;
         } catch (error) {
-          updateConsoleEntry(entry,"ERROR","Command failed unexpectedly.","error");
+          updateConsoleEntry(entry,"ERR","Command failed unexpectedly.","error");
         }
       });
     }
@@ -133,13 +133,13 @@
     }
 
     const COMMANDS={
-      help:{ usage:"help", description:"Show this command reference.", example:"help", run:()=>({ message:renderHelp() }) },
-      weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:()=>({ message:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>" }) },
-      news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:()=>({ message:"Five current headlines loaded. Use the REFRESH control to simulate a feed sync." }) },
-      status:{ usage:"status", description:"Show current link, security, and grid state.", example:"status", run:()=>({ message:"LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE" }) },
-      clear:{ usage:"clear", description:"Clear terminal output while keeping the prompt available.", example:"clear", run:()=>({ message:"Terminal output cleared.", clear:true }) },
-      history:{ usage:"history", description:"Print commands entered during this browser session.", example:"history", run:()=>({ message:commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>")||"No commands recorded." }) },
-      theme:{ usage:"theme [neon|ember]", description:"Switch the HUD accent palette; no argument toggles it.", example:"theme ember", args:["neon","ember"], run:args=>{
+      help:{ usage:"help", description:"Show this command reference.", example:"help", run:(args,context)=>({ message:renderHelp() }) },
+      weather:{ usage:"weather", description:"Read the simulated weather feed.", example:"weather", run:(args,context)=>({ message:"Neo Tokyo: 19°C, Cloudy, wind 14 km/h NE. <span class=\"source\">SIMULATED WEATHER API</span>" }) },
+      news:{ usage:"news", description:"Describe the loaded signal-news feed.", example:"news", run:(args,context)=>({ message:"Five current headlines loaded. Use the REFRESH control to simulate a feed sync." }) },
+      status:{ usage:"status", description:"Show current link, security, and grid state.", example:"status", run:(args,context)=>({ message:"LINK: OK &nbsp;|&nbsp; SEC: SAFE &nbsp;|&nbsp; GRID: ONLINE" }) },
+      clear:{ usage:"clear", description:"Clear terminal output while keeping the prompt available.", example:"clear", run:(args,context)=>({ message:"Terminal output cleared.", clear:true }) },
+      history:{ usage:"history", description:"Print commands entered during this browser session.", example:"history", run:(args,context)=>({ message:commandHistory.map((entry,index)=>`${String(index+1).padStart(2,"0")}  ${entry}`).join("<br>")||"No commands recorded." }) },
+      theme:{ usage:"theme [neon|ember]", description:"Switch the HUD accent palette; no argument toggles it.", example:"theme ember", args:["neon","ember"], run:(args,context)=>{
         const requested=args[0];
         if (!requested) return { message:setTheme(activeTheme==="neon" ? "ember" : "neon") };
         if (!COMMANDS.theme.args.includes(requested)) return { message:`Unknown theme: ${requested}. Use neon or ember.`, tone:"error" };
@@ -161,7 +161,8 @@
       draftCommand="";
       completionState=null;
       log(`<span class="prompt">ops&gt;</span> ${value}`);
-      runWithIndicator(()=>COMMANDS[name] ? COMMANDS[name].run(args) : { message:`Unknown command: ${name}. Type help.`, tone:"error" });
+      const context={ input:value, command:name, log:$("log") };
+      runWithIndicator(value,()=>COMMANDS[name] ? COMMANDS[name].run(args,context) : { message:`Unknown command: ${name}. Type help.`, tone:"error" });
     }
 
     function longestCommonPrefix(candidates) {
