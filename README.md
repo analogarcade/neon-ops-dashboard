@@ -21,7 +21,7 @@ The interface is intentionally self-contained: the current weather, headlines, s
 - Live-updating CPU, memory, and network values
 - Canvas sparklines for system activity
 - Auto-appending alerts every 10 seconds, with a clear action
-- Ops-console terminal with command history, Tab completion, run-state feedback, and framed results
+- Ops-console terminal with a single command registry, history, Tab completion, and RUN/OK/ERR result framing
 - Built-in HUD palettes: neon and ember
 - Responsive single-viewport layout for desktop and small mobile screens
 
@@ -64,7 +64,7 @@ No installation is required.
 
 - Press <kbd>↑</kbd> / <kbd>↓</kbd> to browse command history.
 - Press <kbd>Tab</kbd> to complete a command. Repeated presses cycle matching commands.
-- Each command starts with a RUN indicator and resolves to a consistently framed SUCCESS or ERROR entry.
+- Each command starts with a `[RUN]` indicator and resolves to a consistently framed `[OK]` or `[ERR]` entry.
 
 ## Connecting Real Data
 
