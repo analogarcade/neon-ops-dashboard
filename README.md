@@ -1,47 +1,89 @@
-# ZION OPERATOR TERMINAL
+# NEON OPS
 
-A standalone Matrix-inspired operator console rendered entirely with HTML5, CSS3, and modern vanilla JavaScript. The experience uses a procedural digital-rain canvas, CRT HUD overlays, local archive storage, and a strict terminal command deck.
+A compact, single-page cyberpunk operations dashboard with a futuristic terminal/HUD aesthetic. Built as a standalone browser experience with no frameworks, build step, or external dependencies.
 
-## Quick start
+![Status](https://img.shields.io/badge/status-operational-39ff88?style=flat-square)
+![Stack](https://img.shields.io/badge/stack-HTML%20%2F%20CSS%20%2F%20JS-18f6c5?style=flat-square)
 
-Open [`index.html`](./index.html) directly in a modern browser. No installation, build step, framework, CDN, font, image, or external asset is required.
+## Overview
 
-## Interface modules
+NEON OPS combines a weather feed, signal-news panel, live simulated system statistics, alert timeline, and a terminal-style command interface into one responsive viewport.
 
-- **System Core:** real-time clock, construct connection addresses, signal tracing gauge, and EMP threat alert state.
-- **Signal Intercept:** live decoded packet ticker with automatic four-second pulses.
-- **Archive Node:** encrypted-notebook style title/body form backed by browser `localStorage` and an expandable data-tree log.
-- **Terminal Deck:** interactive shell with command framing, history navigation, and page-scroll-safe keyboard capture.
+The interface is intentionally self-contained: the current weather, headlines, statistics, and alert events are simulated in the browser. Clear labels mark the places where real API integrations could be connected.
 
-## Terminal codes
+## Features
 
-| Code | Function |
+- Dark terminal/HUD design with neon teal and green accents
+- CSS scanlines, grid background, glow effects, and corner highlights
+- Real-time clock and animated status indicators
+- Simulated weather card with a CSS-only animated cloud/rain icon
+- Refreshable signal-news feed with loading state
+- Live-updating CPU, memory, and network values
+- Canvas sparklines for system activity
+- Auto-appending alerts every 10 seconds, with a clear action
+- Ops-console terminal with a single command registry, history, Tab completion, and RUN/OK/ERR result framing
+- Built-in HUD palettes: neon and ember
+- Responsive single-viewport layout for desktop and small mobile screens
+
+## Quick Start
+
+Clone the repository:
+
+```bash
+git clone https://github.com/analogarcade/neon-ops-dashboard.git
+cd neon-ops-dashboard
+```
+
+Open `index.html` directly in a browser:
+
+```bash
+start index.html
+```
+
+Or, in Git Bash on Windows:
+
+```bash
+explorer.exe index.html
+```
+
+No installation is required.
+
+## Terminal Commands
+
+| Command | Result |
 | --- | --- |
-| `help` | List available operational codes and parameters. |
-| `probe` | Run a one-second visual glitch and simulated proxy-hop trace. |
-| `decode` | Change the digital rain to binary streams for five seconds. |
-| `manifest` | Print all notes stored in the active browser archive. |
-| `purge` | Safely remove the local archive database. |
-| `system` | Animate a system diagnostic and operational status report. |
+| `help` | Shows formatted command usage and examples. |
+| `weather` | Displays the simulated weather-feed response. |
+| `news` | Describes the simulated headline feed. |
+| `status` | Shows the current operational status. |
+| `clear` | Clears the terminal log. |
+| `history` | Prints commands entered during the current browser session. |
+| `theme [neon\|ember]` | Switches the HUD palette; `theme` by itself toggles it. |
 
-Press `Enter` to execute a command. `ArrowUp` and `ArrowDown` browse commands entered during the current browser session.
+### Console Controls
 
-## Data and privacy
+- Press <kbd>↑</kbd> / <kbd>↓</kbd> to browse command history.
+- Press <kbd>Tab</kbd> to complete a command. Repeated presses cycle matching commands.
+- Each command starts with a `[RUN]` indicator and resolves to a consistently framed `[OK]` or `[ERR]` entry.
 
-Archive notes are stored only in the browser’s local storage under the `zion-archive` key. The app makes no network requests and does not transmit note content.
+## Connecting Real Data
 
-## Integration points
+The dashboard currently uses client-side simulation. To connect real sources, replace the relevant JavaScript data/update functions in `index.html`:
 
-The weather-style telemetry, packet stream, proxy hops, and diagnostics are intentionally simulated. Replace the corresponding JavaScript generators with backend or API integrations if this becomes a real operations console.
+- Replace the `news` array and refresh handler with a news API request.
+- Replace the weather values with a weather API request.
+- Replace the simulated stat updates with telemetry from your own backend.
 
-## Project structure
+Avoid exposing private API keys in browser-side JavaScript. Use a backend or serverless endpoint to hold secrets and proxy external API requests.
+
+## Project Structure
 
 ```text
 neon-ops-dashboard/
-├── index.html   # Complete standalone experience
-└── README.md    # Project documentation
+├── index.html     # Complete dashboard: markup, styles, and interactions
+└── README.md      # Project documentation
 ```
 
 ## License
 
-Available for personal and educational use. Add a formal license before distributing it as an open-source project.
+This project is available for personal and educational use. Add a formal license file if you plan to distribute or accept contributions.
