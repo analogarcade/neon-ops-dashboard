@@ -1,5 +1,7 @@
 # NEON OPS
 
+![Neon Ops cover](assets/neon-ops-cover.svg)
+
 A compact, single-page cyberpunk operations dashboard with a futuristic terminal/HUD aesthetic. Built as a standalone browser experience with no frameworks, build step, or external dependencies.
 
 ![Status](https://img.shields.io/badge/status-operational-39ff88?style=flat-square)
